@@ -3,7 +3,7 @@ const xlsx = require('xlsx');
 require('dotenv').config();
 
 const KEY_BEARER = process.env.KEY_BEARER;
-const BASE_URL = "https://api.enuves.com/v2/institutions/48595";
+const BASE_URL = process.env.BASE_URL;
 
 // Função para buscar dados da API
 async function fetchData() {
