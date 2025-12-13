@@ -69,6 +69,12 @@ async function fetchData() {
 
         // Gerar XLSX
         const ws = xlsx.utils.aoa_to_sheet(rows);
+
+        // Definir largura das colunas
+        const colunWidths = [35, 10, 10, 15, 15, 15, 10, 20];
+
+        ws['!cols'] = colunWidths.map(width => ({ wch: width }));
+
         const wb = xlsx.utils.book_new();
         xlsx.utils.book_append_sheet(wb, ws, 'Data');
 
