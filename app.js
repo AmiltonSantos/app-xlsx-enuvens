@@ -4,13 +4,14 @@ require('dotenv').config();
 
 const KEY_BEARER = process.env.KEY_BEARER;
 const BASE_URL = process.env.BASE_URL;
+const COD_GROUP = process.env.COD_GROUP;
 
 // Função para buscar dados da API
 async function fetchData() {
     try {
 
         // Busca os códigos dos membros da congregação
-        const responseGroups = await axios.get(`${BASE_URL}/groups/45961`, {
+        const responseGroups = await axios.get(`${BASE_URL}/groups/${COD_GROUP}`, {
             headers: {
                 Authorization: KEY_BEARER,
                 Accept: 'application/json'
