@@ -86,10 +86,10 @@ async function fetchData() {
 
 // Formata a data para o padrão brasileiro
 function formatarData(data) {
-  if (!data) return "";
+    if (!data) return "";
 
-  const [ano, mes, dia] = data.split("-");
-  return `${dia}/${mes}/${ano}`;
+    const [ano, mes, dia] = data?.slice(0,10)?.split("-");
+    return `${dia}/${mes}/${ano}`;
 }
 
 // Chamar a função

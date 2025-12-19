@@ -4,7 +4,6 @@ require('dotenv').config();
 
 const KEY_BEARER = process.env.KEY_BEARER;
 const BASE_URL = process.env.BASE_URL;
-const COD_GROUP = process.env.COD_GROUP;
 const BASE_URL_GROUPS = process.env.BASE_URL_GROUPS;
 
 // Função para buscar dados da API
@@ -14,68 +13,86 @@ async function fetchData() {
             throw new Error('BASE_URL_GROUPS não definida');
         }
 
+        let contador = 0;
+        const rows = [];
+
+        // (opcional) Cabeçalho do Excel
+        rows.push([
+            'Congregacao',
+            'Nome',
+            'Pai',
+            'Mãe',
+            'CPF',
+            'Nascimento',
+            'Naturalidade',
+            'Função',
+            'Batismo',
+            'Rua',
+            'Número',
+            'Bairro',
+            'CEP',
+            'Contato',
+            'Data Cadastro'
+        ]);
+
         const axiosHeaders = {
             headers: {
                 Authorization: KEY_BEARER,
                 Accept: 'application/json'
             }
         };
-        console.log('testes1');
 
         const responseGroups = await axios.get(`${BASE_URL_GROUPS}`, axiosHeaders );
 
         const groupsData = responseGroups.data.results;
 
-        console.log(groupsData);
+        // Loop nos grupos por congregacao
+        for (const group of groupsData) {
+            const nomeCongregacao = group?.name ?? 'N/A';
 
-        // Busca os códigos dos membros da congregação
-        const responseMembros = await axios.get(`${BASE_URL}/groups/${COD_GROUP}`, axiosHeaders );
+            // Busca os códigos dos membros da congregação
+            const responseMembros = await axios.get(`${BASE_URL}/groups/${group.id}`, axiosHeaders );
 
-        const membrosData = responseMembros.data.results;
+            const membrosData = responseMembros.data.results;
 
-        //Converter peoples (string → array)
-        const peoples = JSON.parse(membrosData.peoples);
+            //Converter peoples (string → array)
+            const peoples = JSON.parse(membrosData.peoples);
 
-        const rows = [];
+            // Loop nas pessoas
+            for (const personId of peoples) {
 
-        // (opcional) Cabeçalho do Excel
-        rows.push([
-            'Nome',
-            'Função',
-            'Batismo',
-            'Foto',
-            'Nacionalidade',
-            'CPF',
-            'Nascimento',
-            'Naturalidade'
-        ]);
+                const responsePeoples = await axios.get(`${BASE_URL}/people/${personId}`, axiosHeaders );
 
-        // Loop nas pessoas
-        for (const personId of peoples) {
+                const peopleData = responsePeoples.data.results;
 
-            const responsePeoples = await axios.get(`${BASE_URL}/people/${personId}`, {
-                    axiosHeaders
-                }
-            );
+                // Extrafields
+                const extrafields = JSON.parse(peopleData.extrafields || '[]');
+                const nomePai = extrafields.find(f => f.id_ef === 15819)?.value?.trim() || '';
+                const nomeMae = extrafields.find(f => f.id_ef === 15820)?.value?.trim() || '';
+                const naturalidade = extrafields.find(f => f.id_ef === 15823)?.value?.trim() || '';
 
-            const data = responsePeoples.data.results;
-
-            // Extrafields
-            const extrafields = JSON.parse(data.extrafields || '[]');
-            const value15823 = extrafields.find(f => f.id_ef === 15823)?.value?.trim() || '';
-
-            // Linha do Excel
-            const cpf = data.doc_1?.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4').slice(0, 14);
-            rows.push([
-                data.full_name?.toUpperCase(),
-                'MEMBRO',
-                formatarData(data.baptism_date),
-                cpf,
-                'BRASILEIRA',
-                cpf,
-                formatarData(data.birthydate),
-                value15823?.toUpperCase()
-            ]);
+                // Linha do Excel
+                const cpf = peopleData.doc_1?.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4').slice(0, 14);
+                rows.push([
+                    nomeCongregacao.toUpperCase(),
+                    peopleData.full_name?.toUpperCase(),
+                    nomePai?.toUpperCase(),
+                    nomeMae?.toUpperCase(),
+                    cpf,
+                    formatarData(peopleData.birthydate),
+                    naturalidade?.toUpperCase(),
+                    'MEMBRO',
+                    formatarData(peopleData.baptism_date),
+                    peopleData?.address_1?.toUpperCase() ?? '',
+                    peopleData?.address_number ?? '',
+                    peopleData?.address_2?.toUpperCase() ?? '',
+                    peopleData?.postal_code,
+                    peopleData.phone_1,
+                    formatarData(peopleData.created_at)                  
+                ]);
+                contador ++;
+                console.log('QUANTIDADE DE REGISTRO: ', contador);
+            }
         }
 
         // Gerar XLSX
@@ -109,10 +126,10 @@ async function fetchData() {
 
 // Formata a data para o padrão brasileiro
 function formatarData(data) {
-  if (!data) return "";
+    if (!data) return "";
 
-  const [ano, mes, dia] = data.split("-");
-  return `${dia}/${mes}/${ano}`;
+    const [ano, mes, dia] = data?.slice(0,10)?.split("-");
+    return `${dia}/${mes}/${ano}`;
 }
 
 // Chamar a função
