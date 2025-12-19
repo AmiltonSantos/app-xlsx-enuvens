@@ -1,5 +1,5 @@
 const axios = require('axios');
-const xlsx = require('xlsx');
+const ExcelJS = require('exceljs');
 require('dotenv').config();
 
 const KEY_BEARER = process.env.KEY_BEARER;
@@ -23,25 +23,6 @@ async function fetchData() {
             throw new Error('BASE_URL_GROUPS não definida');
         }
 
-        const rows = [];
-        rows.push([
-            'Congregacao',
-            'Data Cadastro',
-            'Nome',
-            'Pai',
-            'Mãe',
-            'CPF',
-            'Nascimento',
-            'Naturalidade',
-            'Função',
-            'Batismo',
-            'Rua',
-            'Número',
-            'Bairro',
-            'CEP',
-            'Contato',
-        ]);
-
         const axiosHeaders = {
             headers: {
                 Authorization: KEY_BEARER,
@@ -56,9 +37,72 @@ async function fetchData() {
         
         console.log(`${groupsData.length} grupos encontrados`);
 
-        // 2. Processar grupos em batches (lotes)
-        const batchSize = 10; // Processa 10 grupos por vez
-        const allPeopleRows = [];
+        // 2. Criar workbook do Excel
+        const workbook = new ExcelJS.Workbook();
+        workbook.created = new Date();
+        workbook.modified = new Date();
+        
+        // Adicionar planilha
+        const worksheet = workbook.addWorksheet('Dados', {
+            views: [{ state: 'frozen', ySplit: 1 }] // Congela a primeira linha
+        });
+
+        // 3. Definir cabeçalhos com estilo
+        const headersRows = [
+            'Congregação',
+            'Data Cadastro',
+            'Nome',
+            'Pai',
+            'Mãe',
+            'CPF',
+            'Nascimento',
+            'Naturalidade',
+            'Função',
+            'Batismo',
+            'Rua',
+            'Número',
+            'Bairro',
+            'CEP',
+            'Contato',
+        ];
+
+        // Adicionar linha de cabeçalho
+        const headerRow = worksheet.addRow(headersRows);
+
+        // Aplicar estilo aos cabeçalhos
+        headerRow.eachCell((cell, colNumber) => {
+            cell.font = {
+                bold: true,
+                size: 12,
+                color: { argb: 'FFFFFFFF' } // Texto branco
+            };
+            cell.alignment = {
+                horizontal: 'center',
+                vertical: 'middle',
+                wrapText: true
+            };
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: 'FF4472C4' } // Azul (pode mudar a cor)
+            };
+            cell.border = {
+                top: { style: 'thin', color: { argb: 'FF000000' } },
+                left: { style: 'thin', color: { argb: 'FF000000' } },
+                bottom: { style: 'thin', color: { argb: 'FF000000' } },
+                right: { style: 'thin', color: { argb: 'FF000000' } }
+            };
+        });
+
+        // 4. Definir larguras das colunas
+        const colWidths = [25, 20, 50, 40, 40, 15, 15, 30, 20, 15, 40, 15, 30, 15, 15];
+        colWidths.forEach((width, index) => {
+            worksheet.getColumn(index + 1).width = width;
+        });
+
+        // 5. Processar grupos em batches (lotes)
+        const batchSize = 10;
+        let totalPessoas = 0;
         
         for (let i = 0; i < groupsData.length; i += batchSize) {
             const batch = groupsData.slice(i, i + batchSize);
@@ -68,13 +112,34 @@ async function fetchData() {
             const batchPromises = batch.map(group => processGroup(group, axiosHeaders));
             const batchResults = await Promise.all(batchPromises);
             
-            // Adiciona resultados
-            batchResults.forEach(result => {
+            // Adicionar dados das pessoas à planilha
+            batchResults.forEach((result, batchIndex) => {
                 if (result.rows && result.rows.length > 0) {
-                    if (allPeopleRows.length > 0) {
-                        allPeopleRows.push(['']); // Linha em branco entre grupos
+                    // Adicionar linha em branco entre grupos (exceto para o primeiro grupo)
+                    if (worksheet.rowCount > 1) {
+                        worksheet.addRow([]);
                     }
-                    allPeopleRows.push(...result.rows);
+                    
+                    // Adicionar linha com nome do grupo (opcional)
+                    const groupRow = worksheet.addRow([result.groupName]);
+                    groupRow.font = { bold: true, color: { argb: 'FF0000FF' } };
+                    
+                    // Adicionar todas as pessoas do grupo
+                    result.rows.forEach(personData => {
+                        const row = worksheet.addRow(personData);
+                        
+                        // Aplicar bordas às células de dados
+                        row.eachCell((cell) => {
+                            cell.border = {
+                                top: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+                                left: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+                                bottom: { style: 'thin', color: { argb: 'FFD3D3D3' } },
+                                right: { style: 'thin', color: { argb: 'FFD3D3D3' } }
+                            };
+                        });
+                    });
+                    
+                    totalPessoas += result.rows.length;
                 }
             });
             
@@ -84,22 +149,21 @@ async function fetchData() {
             }
         }
 
-        // 3. Adicionar todas as linhas ao array principal
-        rows.push(...allPeopleRows);
+        // 6. Adicionar filtros automáticos
+        worksheet.autoFilter = {
+            from: { row: 1, column: 1 },
+            to: { row: 1, column: headersRows.length }
+        };
 
-        // 4. Gerar XLSX
-        console.log('Gerando arquivo Excel...');
-        const ws = xlsx.utils.aoa_to_sheet(rows);
-        const colWidths = [25, 20, 35, 35, 35, 15, 10, 25, 20, 10, 40, 10, 30, 10, 15];
-        ws['!cols'] = colWidths.map(width => ({ wch: width }));
+        // 7. Salvar arquivo
+        console.log('Salvando arquivo Excel...');
+        const filename = `DADOS_ENUVENS_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.xlsx`;
+        
+        await workbook.xlsx.writeFile(filename);
 
-        const wb = xlsx.utils.book_new();
-        xlsx.utils.book_append_sheet(wb, ws, 'Data');
-
-        const filename = `DADOS_ENUVENS_${new Date().toISOString().slice(0, 19).replace('T', ' ')}.xlsx`;
-        xlsx.writeFile(wb, filename);
-
-        console.log(`Arquivo gerado com ${(allPeopleRows.length) + 1} linhas!`);
+        console.log(`Arquivo "${filename}" gerado com sucesso!`);
+        console.log(`Total de pessoas: ${totalPessoas}`);
+        console.log(`Total de grupos: ${groupsData.length}`);
 
         // Verificar se arquivo foi criado
         const fs = require('fs');
@@ -110,8 +174,11 @@ async function fetchData() {
 
         console.timeEnd('Tempo total de execução');
 
+        return filename;
+
     } catch (error) {
         console.error('Erro:', error.message);
+        console.error('Stack:', error.stack);
         return null;
     }
 }
@@ -130,12 +197,15 @@ async function processGroup(group, headers) {
 
         // Buscar membros do grupo
         const responseMembros = await axios.get(`${BASE_URL}/groups/${group.id}`, headers);
-
         const membrosData = responseMembros.data.results;
         const peoples = JSON.parse(membrosData.peoples || '[]');
 
         if (peoples.length === 0) {
-            const result = { rows: [], count: 0 };
+            const result = { 
+                rows: [], 
+                count: 0, 
+                groupName: nomeCongregacao 
+            };
             cache.groups.set(cacheKey, result);
             return result;
         }
@@ -169,7 +239,7 @@ async function processGroup(group, headers) {
             }
         }
 
-        // Transformar dados das pessoas em linhas
+        // Transformar dados das pessoas no formato para Excel
         allPeopleData.forEach(personData => {
             if (personData) {
                 const cpf = personData.doc_1?.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4').slice(0, 14);
@@ -194,18 +264,26 @@ async function processGroup(group, headers) {
             }
         });
 
-        const result = { rows: groupRows, count: groupRows.length };
+        const result = { 
+            rows: groupRows, 
+            count: groupRows.length,
+            groupName: nomeCongregacao
+        };
         cache.groups.set(cacheKey, result);
         
         return result;
 
     } catch (error) {
         console.error(`Erro no grupo ${group.id}:`, error.message);
-        return { rows: [], count: 0 };
+        return { 
+            rows: [], 
+            count: 0,
+            groupName: 'ERRO'
+        };
     }
 }
 
-// Função para buscar pessoa com cache
+// Função para buscar pessoa com cache (mantida igual)
 async function fetchPersonWithCache(personId, headers) {
     const cacheKey = `person_${personId}`;
     
@@ -214,10 +292,7 @@ async function fetchPersonWithCache(personId, headers) {
     }
 
     try {
-        const response = await axios.get(
-            `${BASE_URL}/people/${personId}`,
-            headers
-        );
+        const response = await axios.get(`${BASE_URL}/people/${personId}`, headers);
 
         const peopleData = response.data.results;
         
@@ -249,7 +324,7 @@ async function fetchPersonWithCache(personId, headers) {
     }
 }
 
-// Formatar data
+// Formatar data (mantida igual)
 function formatarData(data) {
     if (!data) return "";
     
@@ -273,6 +348,15 @@ function determinarFuncao(extrafields) {
 }
 
 // Executar
-setTimeout(() => {
-    fetchData();
-}, 1000);
+setTimeout(async () => {
+    try {
+        const resultado = await fetchData();
+        if (resultado) {
+            console.log('Processo concluído com sucesso!');
+        } else {
+            console.log('Processo falhou!');
+        }
+    } catch (error) {
+        console.error('Erro na execução:', error);
+    }
+}, 5000);
