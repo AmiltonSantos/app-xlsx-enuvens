@@ -266,7 +266,7 @@ async function generateExcelFile(rows) {
         const wb = xlsx.utils.book_new();
         xlsx.utils.book_append_sheet(wb, ws, 'Membros');
         
-        const filename = `DADOS_ENUVENS_PROMISE_ALL_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        const filename = `DADOS_ENUVENS_PROMISE_ALL_${new Date().toISOString().slice(0, 19).replace('T', ' ')}.xlsx`;
         xlsx.writeFile(wb, filename);
         
         console.log(`💾 Arquivo salvo como: ${filename}`);

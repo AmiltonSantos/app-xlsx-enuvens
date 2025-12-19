@@ -93,7 +93,9 @@ async function fetchData() {
 
         const wb = xlsx.utils.book_new();
         xlsx.utils.book_append_sheet(wb, ws, 'Data');
-        xlsx.writeFile(wb, 'DADOS_ENUVENS.xlsx');
+
+        const filename = `DADOS_ENUVENS_${new Date().toISOString().slice(0, 19).replace('T', ' ')}.xlsx`;
+        xlsx.writeFile(wb, filename);
 
         console.log(`Arquivo gerado com ${allPeopleRows.length} pessoas!`);
         console.timeEnd('Tempo total de execução');
