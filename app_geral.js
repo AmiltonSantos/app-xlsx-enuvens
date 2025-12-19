@@ -19,6 +19,7 @@ async function fetchData() {
         // (opcional) Cabeçalho do Excel
         rows.push([
             'Congregacao',
+            'Data Cadastro',
             'Nome',
             'Pai',
             'Mãe',
@@ -32,7 +33,6 @@ async function fetchData() {
             'Bairro',
             'CEP',
             'Contato',
-            'Data Cadastro'
         ]);
 
         const axiosHeaders = {
@@ -81,6 +81,7 @@ async function fetchData() {
                         const cpf = peopleData.doc_1?.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4').slice(0, 14);
                         rows.push([
                             nomeCongregacao.toUpperCase(),
+                            formatarData(peopleData.created_at),
                             peopleData.full_name?.toUpperCase(),
                             nomePai?.toUpperCase(),
                             nomeMae?.toUpperCase(),
@@ -93,8 +94,7 @@ async function fetchData() {
                             peopleData?.address_number ?? '',
                             peopleData?.address_2?.toUpperCase() ?? '',
                             peopleData?.postal_code,
-                            peopleData.phone_1,
-                            formatarData(peopleData.created_at)                  
+                            peopleData.phone_1                
                         ]);
                         contador ++;
                         console.log('QUANTIDADE DE REGISTRO: ', contador);
@@ -107,7 +107,7 @@ async function fetchData() {
         const ws = xlsx.utils.aoa_to_sheet(rows);
 
         // Definir largura das colunas
-        const colunWidths = [30, 35, 35, 35, 15, 10, 25, 20, 10, 40, 10, 30, 10, 15, 15];
+        const colunWidths = [25, 20, 35, 35, 35, 15, 10, 25, 20, 10, 40, 10, 30, 10, 15];
 
         ws['!cols'] = colunWidths.map(width => ({ wch: width }));
 
@@ -136,8 +136,17 @@ async function fetchData() {
 function formatarData(data) {
     if (!data) return "";
 
-    const [ano, mes, dia] = data?.slice(0,10)?.split("-");
-    return `${dia}/${mes}/${ano}`;
+    let formatData = '';
+
+    if (data.length > 10) {
+        const [ano, mes, dia, hora] = data?.split(/[- ]/);
+        formatData = `${dia}/${mes}/${ano} ${hora}`;
+    } else {
+        const [ano, mes, dia] = data?.split("-");
+        formatData = `${dia}/${mes}/${ano}`;
+    }
+
+    return formatData;
 }
 
 function determinarFuncao(extrafields) {
@@ -165,4 +174,4 @@ function determinarFuncao(extrafields) {
 // Chamar a função
 setTimeout(() => {
     fetchData();    
-}, 5000);
+}, 1000);
