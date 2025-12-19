@@ -186,7 +186,7 @@ async function processGroup(group, headers) {
                     personData.funcao,
                     formatarData(personData.baptism_date),
                     personData.address_1?.toUpperCase() ?? '',
-                    personData.address_number === '' ? 0 : personData.address_number,
+                    personData.address_number === '' ? '0' : personData.address_number,
                     personData.address_2?.toUpperCase() ?? '',
                     personData.postal_code?.replace(/^(\d{5})(\d{3})$/, '$1-$2')?.slice(0, 9),
                     personData.phone_1

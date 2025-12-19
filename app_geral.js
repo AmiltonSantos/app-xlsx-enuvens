@@ -92,7 +92,7 @@ async function fetchData() {
                             funcao,
                             formatarData(peopleData.baptism_date),
                             peopleData?.address_1?.toUpperCase() ?? '',
-                            peopleData.address_number === '' ? 0 : personData.address_number,
+                            peopleData.address_number === '' ? '0' : personData.address_number,
                             peopleData?.address_2?.toUpperCase() ?? '',
                             peopleData.postal_code?.replace(/^(\d{5})(\d{3})$/, '$1-$2')?.slice(0, 9),
                             peopleData.phone_1                

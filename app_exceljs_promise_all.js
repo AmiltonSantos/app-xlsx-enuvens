@@ -256,7 +256,7 @@ async function processGroup(group, headers) {
                     personData.funcao,
                     formatarData(personData.baptism_date),
                     personData.address_1?.toUpperCase() ?? '',
-                    personData.address_number === '' ? 0 : personData.address_number,
+                    personData.address_number === '' ? '0' : personData.address_number,
                     personData.address_2?.toUpperCase() ?? '',
                     personData.postal_code?.replace(/^(\d{5})(\d{3})$/, '$1-$2')?.slice(0, 9),
                     personData.phone_1
@@ -359,4 +359,4 @@ setTimeout(async () => {
     } catch (error) {
         console.error('Erro na execução:', error);
     }
-}, 5000);
+}, 1000);
