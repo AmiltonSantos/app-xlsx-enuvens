@@ -9,6 +9,7 @@ const BASE_URL_GROUPS = process.env.BASE_URL_GROUPS;
 // Função para buscar dados da API
 async function fetchData() {
     try {
+        console.time('Tempo total de execução');
         if (!BASE_URL_GROUPS) {
             throw new Error('BASE_URL_GROUPS não definida');
         }
@@ -91,7 +92,7 @@ async function fetchData() {
                             funcao,
                             formatarData(peopleData.baptism_date),
                             peopleData?.address_1?.toUpperCase() ?? '',
-                            peopleData?.address_number ?? '',
+                            peopleData?.address_number ?? 0,
                             peopleData?.address_2?.toUpperCase() ?? '',
                             peopleData?.postal_code,
                             peopleData.phone_1                
@@ -117,6 +118,8 @@ async function fetchData() {
         xlsx.writeFile(wb, 'DADOS_ENUVENS.xlsx');
 
         console.log('Arquivo XLSX gerado com sucesso!');
+        
+        console.timeEnd('Tempo total de execução');
 
     } catch (error) {
         if (error.code === 'ERR_INVALID_URL') {
