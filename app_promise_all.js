@@ -71,7 +71,9 @@ async function fetchData() {
             // Adiciona resultados
             batchResults.forEach(result => {
                 if (result.rows && result.rows.length > 0) {
-                    allPeopleRows.push(['']); // Linha em branco entre grupos
+                    if (allPeopleRows.length > 0) {
+                        allPeopleRows.push(['']); // Linha em branco entre grupos
+                    }
                     allPeopleRows.push(...result.rows);
                 }
             });
@@ -98,6 +100,14 @@ async function fetchData() {
         xlsx.writeFile(wb, filename);
 
         console.log(`Arquivo gerado com ${allPeopleRows.length} pessoas!`);
+
+        // Verificar se arquivo foi criado
+        const fs = require('fs');
+        if (fs.existsSync(filename)) {
+            const stats = fs.statSync(filename);
+            console.log(`Tamanho do arquivo: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+        }
+
         console.timeEnd('Tempo total de execução');
 
     } catch (error) {
