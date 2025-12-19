@@ -10,25 +10,26 @@ const BASE_URL_GROUPS = process.env.BASE_URL_GROUPS;
 // Função para buscar dados da API
 async function fetchData() {
     try {
+        if (!BASE_URL_GROUPS) {
+            throw new Error('BASE_URL_GROUPS não definida');
+        }
+
         const axiosHeaders = {
             headers: {
                 Authorization: KEY_BEARER,
                 Accept: 'application/json'
             }
         };
+        console.log('testes1');
 
-        const responseGroups = await axios.get(`${BASE_URL_GROUPS}`, {
-            axiosHeaders
-        });
+        const responseGroups = await axios.get(`${BASE_URL_GROUPS}`, axiosHeaders );
 
         const groupsData = responseGroups.data.results;
 
         console.log(groupsData);
 
         // Busca os códigos dos membros da congregação
-        const responseMembros = await axios.get(`${BASE_URL}/groups/${COD_GROUP}`, {
-            axiosHeaders
-        });
+        const responseMembros = await axios.get(`${BASE_URL}/groups/${COD_GROUP}`, axiosHeaders );
 
         const membrosData = responseMembros.data.results;
 
@@ -93,7 +94,16 @@ async function fetchData() {
         console.log('Arquivo XLSX gerado com sucesso!');
 
     } catch (error) {
-        console.error('Erro:', error.message);
+        if (error.code === 'ERR_INVALID_URL') {
+            console.error('URL inválida:', BASE_URL_GROUPS);
+        } else if (error.response) {
+            console.error('Erro da API:', error.response.status, error.response.data);
+        } else {
+            console.error('Erro inesperado:', error.message);
+        }
+    
+        // retorno seguro
+        return null;
     }
 }
 
@@ -106,4 +116,6 @@ function formatarData(data) {
 }
 
 // Chamar a função
-fetchData();
+setTimeout(() => {
+    fetchData();    
+}, 5000);

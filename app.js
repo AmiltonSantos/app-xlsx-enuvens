@@ -17,12 +17,11 @@ async function fetchData() {
         };
 
         // Busca os códigos dos membros da congregação
-        const responseMembros = await axios.get(`${BASE_URL}/groups/${COD_GROUP}`, {
-            axiosHeaders
-        });
+        const responseMembros = await axios.get(`${BASE_URL}/groups/${COD_GROUP}`, axiosHeaders );
 
         const membrosData = responseMembros.data.results;
 
+        console.log(responseMembros);
         //Converter peoples (string → array)
         const peoples = JSON.parse(membrosData.peoples);
 
@@ -43,10 +42,7 @@ async function fetchData() {
         // Loop nas pessoas
         for (const personId of peoples) {
 
-            const responsePeoples = await axios.get(`${BASE_URL}/people/${personId}`, {
-                    axiosHeaders
-                }
-            );
+            const responsePeoples = await axios.get(`${BASE_URL}/people/${personId}`, axiosHeaders );
 
             const data = responsePeoples.data.results;
 
