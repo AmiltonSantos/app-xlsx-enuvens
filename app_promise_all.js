@@ -99,7 +99,7 @@ async function fetchData() {
         const filename = `DADOS_ENUVENS_${new Date().toISOString().slice(0, 19).replace('T', ' ')}.xlsx`;
         xlsx.writeFile(wb, filename);
 
-        console.log(`Arquivo gerado com ${allPeopleRows.length} pessoas!`);
+        console.log(`Arquivo gerado com ${(allPeopleRows.length) + 1} linhas!`);
 
         // Verificar se arquivo foi criado
         const fs = require('fs');
