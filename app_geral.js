@@ -48,9 +48,6 @@ async function fetchData() {
 
         // Loop nos grupos por congregacao
         for (const group of groupsData) {
-            // Criar um espço entre uma congregacao e outra
-            rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-
             const nomeCongregacao = group?.name ?? 'N/A';
 
             // Busca os códigos dos membros da congregação
@@ -61,42 +58,47 @@ async function fetchData() {
             //Converter peoples (string → array)
             const peoples = JSON.parse(membrosData.peoples);
 
-            // Loop nas pessoas
-            for (const personId of peoples) {
+            if (peoples.length > 0) {
+                // Criar um espaço entre uma congregacao e outra
+                rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
 
-                const responsePeoples = await axios.get(`${BASE_URL}/people/${personId}`, axiosHeaders );
-
-                const peopleData = responsePeoples.data.results;
-
-                if (peopleData) {
-                    // Extrafields
-                    const extrafields = JSON.parse(peopleData.extrafields || '[]');
-                    const nomePai = extrafields.find(f => f.id_ef === 15819)?.value?.trim() || '';
-                    const nomeMae = extrafields.find(f => f.id_ef === 15820)?.value?.trim() || '';
-                    const naturalidade = extrafields.find(f => f.id_ef === 15823)?.value?.trim() || '';
-                    const funcao = determinarFuncao(extrafields);
+                // Loop nas pessoas
+                for (const personId of peoples) {
     
-                    // Linha do Excel
-                    const cpf = peopleData.doc_1?.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4').slice(0, 14);
-                    rows.push([
-                        nomeCongregacao.toUpperCase(),
-                        peopleData.full_name?.toUpperCase(),
-                        nomePai?.toUpperCase(),
-                        nomeMae?.toUpperCase(),
-                        cpf,
-                        formatarData(peopleData.birthydate),
-                        naturalidade?.toUpperCase(),
-                        funcao,
-                        formatarData(peopleData.baptism_date),
-                        peopleData?.address_1?.toUpperCase() ?? '',
-                        peopleData?.address_number ?? '',
-                        peopleData?.address_2?.toUpperCase() ?? '',
-                        peopleData?.postal_code,
-                        peopleData.phone_1,
-                        formatarData(peopleData.created_at)                  
-                    ]);
-                    contador ++;
-                    console.log('QUANTIDADE DE REGISTRO: ', contador);
+                    const responsePeoples = await axios.get(`${BASE_URL}/people/${personId}`, axiosHeaders );
+    
+                    const peopleData = responsePeoples.data.results;
+    
+                    if (peopleData) {
+                        // Extrafields
+                        const extrafields = JSON.parse(peopleData.extrafields || '[]');
+                        const nomePai = extrafields.find(f => f.id_ef === 15819)?.value?.trim() || '';
+                        const nomeMae = extrafields.find(f => f.id_ef === 15820)?.value?.trim() || '';
+                        const naturalidade = extrafields.find(f => f.id_ef === 15823)?.value?.trim() || '';
+                        const funcao = determinarFuncao(extrafields);
+        
+                        // Linha do Excel
+                        const cpf = peopleData.doc_1?.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4').slice(0, 14);
+                        rows.push([
+                            nomeCongregacao.toUpperCase(),
+                            peopleData.full_name?.toUpperCase(),
+                            nomePai?.toUpperCase(),
+                            nomeMae?.toUpperCase(),
+                            cpf,
+                            formatarData(peopleData.birthydate),
+                            naturalidade?.toUpperCase(),
+                            funcao,
+                            formatarData(peopleData.baptism_date),
+                            peopleData?.address_1?.toUpperCase() ?? '',
+                            peopleData?.address_number ?? '',
+                            peopleData?.address_2?.toUpperCase() ?? '',
+                            peopleData?.postal_code,
+                            peopleData.phone_1,
+                            formatarData(peopleData.created_at)                  
+                        ]);
+                        contador ++;
+                        console.log('QUANTIDADE DE REGISTRO: ', contador);
+                    }
                 }
             }
         }
