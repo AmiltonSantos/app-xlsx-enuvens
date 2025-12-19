@@ -68,34 +68,36 @@ async function fetchData() {
 
                 const peopleData = responsePeoples.data.results;
 
-                // Extrafields
-                const extrafields = JSON.parse(peopleData.extrafields || '[]');
-                const nomePai = extrafields.find(f => f.id_ef === 15819)?.value?.trim() || '';
-                const nomeMae = extrafields.find(f => f.id_ef === 15820)?.value?.trim() || '';
-                const naturalidade = extrafields.find(f => f.id_ef === 15823)?.value?.trim() || '';
-                const funcao = determinarFuncao(extrafields);
-
-                // Linha do Excel
-                const cpf = peopleData.doc_1?.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4').slice(0, 14);
-                rows.push([
-                    nomeCongregacao.toUpperCase(),
-                    peopleData.full_name?.toUpperCase(),
-                    nomePai?.toUpperCase(),
-                    nomeMae?.toUpperCase(),
-                    cpf,
-                    formatarData(peopleData.birthydate),
-                    naturalidade?.toUpperCase(),
-                    funcao,
-                    formatarData(peopleData.baptism_date),
-                    peopleData?.address_1?.toUpperCase() ?? '',
-                    peopleData?.address_number ?? '',
-                    peopleData?.address_2?.toUpperCase() ?? '',
-                    peopleData?.postal_code,
-                    peopleData.phone_1,
-                    formatarData(peopleData.created_at)                  
-                ]);
-                contador ++;
-                console.log('QUANTIDADE DE REGISTRO: ', contador);
+                if (peopleData) {
+                    // Extrafields
+                    const extrafields = JSON.parse(peopleData.extrafields || '[]');
+                    const nomePai = extrafields.find(f => f.id_ef === 15819)?.value?.trim() || '';
+                    const nomeMae = extrafields.find(f => f.id_ef === 15820)?.value?.trim() || '';
+                    const naturalidade = extrafields.find(f => f.id_ef === 15823)?.value?.trim() || '';
+                    const funcao = determinarFuncao(extrafields);
+    
+                    // Linha do Excel
+                    const cpf = peopleData.doc_1?.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4').slice(0, 14);
+                    rows.push([
+                        nomeCongregacao.toUpperCase(),
+                        peopleData.full_name?.toUpperCase(),
+                        nomePai?.toUpperCase(),
+                        nomeMae?.toUpperCase(),
+                        cpf,
+                        formatarData(peopleData.birthydate),
+                        naturalidade?.toUpperCase(),
+                        funcao,
+                        formatarData(peopleData.baptism_date),
+                        peopleData?.address_1?.toUpperCase() ?? '',
+                        peopleData?.address_number ?? '',
+                        peopleData?.address_2?.toUpperCase() ?? '',
+                        peopleData?.postal_code,
+                        peopleData.phone_1,
+                        formatarData(peopleData.created_at)                  
+                    ]);
+                    contador ++;
+                    console.log('QUANTIDADE DE REGISTRO: ', contador);
+                }
             }
         }
 
@@ -103,7 +105,7 @@ async function fetchData() {
         const ws = xlsx.utils.aoa_to_sheet(rows);
 
         // Definir largura das colunas
-        const colunWidths = [35, 35, 35, 15, 10, 25, 20, 10, 40, 10, 30, 10, 15, 15];
+        const colunWidths = [30, 35, 35, 35, 15, 10, 25, 20, 10, 40, 10, 30, 10, 15, 15];
 
         ws['!cols'] = colunWidths.map(width => ({ wch: width }));
 
