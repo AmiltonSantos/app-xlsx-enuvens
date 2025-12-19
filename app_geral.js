@@ -48,6 +48,9 @@ async function fetchData() {
 
         // Loop nos grupos por congregacao
         for (const group of groupsData) {
+            // Criar um espço entre uma congregacao e outra
+            rows.push(['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+
             const nomeCongregacao = group?.name ?? 'N/A';
 
             // Busca os códigos dos membros da congregação
@@ -70,6 +73,7 @@ async function fetchData() {
                 const nomePai = extrafields.find(f => f.id_ef === 15819)?.value?.trim() || '';
                 const nomeMae = extrafields.find(f => f.id_ef === 15820)?.value?.trim() || '';
                 const naturalidade = extrafields.find(f => f.id_ef === 15823)?.value?.trim() || '';
+                const funcao = determinarFuncao(extrafields);
 
                 // Linha do Excel
                 const cpf = peopleData.doc_1?.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4').slice(0, 14);
@@ -81,7 +85,7 @@ async function fetchData() {
                     cpf,
                     formatarData(peopleData.birthydate),
                     naturalidade?.toUpperCase(),
-                    'MEMBRO',
+                    funcao,
                     formatarData(peopleData.baptism_date),
                     peopleData?.address_1?.toUpperCase() ?? '',
                     peopleData?.address_number ?? '',
@@ -99,7 +103,7 @@ async function fetchData() {
         const ws = xlsx.utils.aoa_to_sheet(rows);
 
         // Definir largura das colunas
-        const colunWidths = [35, 10, 10, 15, 15, 15, 10, 20];
+        const colunWidths = [35, 35, 35, 15, 10, 25, 20, 10, 40, 10, 30, 10, 15, 15];
 
         ws['!cols'] = colunWidths.map(width => ({ wch: width }));
 
@@ -130,6 +134,28 @@ function formatarData(data) {
 
     const [ano, mes, dia] = data?.slice(0,10)?.split("-");
     return `${dia}/${mes}/${ano}`;
+}
+
+function determinarFuncao(extrafields) {
+    const funcoes = [
+        'MEMBRO',
+        'COOPERADOR', 
+        'DIÁCONO',
+        'PRESBÍTERO',
+        'EVANGELISTA',
+        'PASTOR',
+        'CONGREGADO'
+    ];
+    
+    const campoFuncoes = extrafields.find(item => item.id_ef === "15822");
+    
+    if (!campoFuncoes || !campoFuncoes.sub) {
+        return 'CAMPO NÃO ENCONTRADO';
+    }
+    
+    const indexAtivo = campoFuncoes.sub.findIndex(sub => sub.value === true);
+    
+    return indexAtivo !== -1 ? funcoes[indexAtivo] : 'NENHUMA FUNÇÃO';
 }
 
 // Chamar a função
