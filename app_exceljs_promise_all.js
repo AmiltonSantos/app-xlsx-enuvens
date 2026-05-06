@@ -54,6 +54,7 @@ async function fetchData() {
             'Nome',
             'Pai',
             'Mãe',
+            'Gênero',
             'CPF',
             'Nascimento',
             'Naturalidade',
@@ -95,7 +96,7 @@ async function fetchData() {
         });
 
         // 4. Definir larguras das colunas
-        const colWidths = [25, 20, 50, 40, 40, 15, 15, 30, 20, 15, 40, 15, 30, 15, 15];
+        const colWidths = [25, 20, 50, 40, 40, 20, 15, 15, 30, 20, 15, 40, 15, 30, 15, 15];
         colWidths.forEach((width, index) => {
             worksheet.getColumn(index + 1).width = width;
         });
@@ -250,6 +251,7 @@ async function processGroup(group, headers) {
                     personData.full_name?.toUpperCase(),
                     personData.nomePai?.toUpperCase(),
                     personData.nomeMae?.toUpperCase(),
+                    personData.gender === 'M' ? 'MASCULINO' : 'FEMININO',
                     cpf,
                     formatarData(personData.birthydate),
                     personData.naturalidade?.toUpperCase(),
@@ -359,4 +361,4 @@ setTimeout(async () => {
     } catch (error) {
         console.error('Erro na execução:', error);
     }
-}, 1000);
+}, 5000);
