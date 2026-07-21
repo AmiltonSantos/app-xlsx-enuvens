@@ -1,5 +1,8 @@
 const axios = require('axios');
 const ExcelJS = require('exceljs');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 require('dotenv').config();
 
 const KEY_BEARER = process.env.KEY_BEARER;
@@ -104,7 +107,8 @@ async function fetchData() {
         // 5. Processar grupos em batches (lotes)
         const batchSize = 10;
         let totalPessoas = 0;
-        
+        const allImagePeople = [];
+
         for (let i = 0; i < groupsData.length; i += batchSize) {
             const batch = groupsData.slice(i, i + batchSize);
             console.log(`Processando lote ${Math.floor(i/batchSize) + 1} de ${Math.ceil(groupsData.length/batchSize)}`);
@@ -142,6 +146,9 @@ async function fetchData() {
                     
                     totalPessoas += result.rows.length;
                 }
+                if (result.imagePeople && result.imagePeople.length > 0) {
+                    allImagePeople.push(...result.imagePeople);
+                }
             });
             
             // Pequeno delay entre batches para não sobrecarregar API
@@ -167,7 +174,6 @@ async function fetchData() {
         console.log(`Total de grupos: ${groupsData.length}`);
 
         // Verificar se arquivo foi criado
-        const fs = require('fs');
         if (fs.existsSync(filename)) {
             const stats = fs.statSync(filename);
             console.log(`Tamanho do arquivo: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
@@ -175,7 +181,7 @@ async function fetchData() {
 
         console.timeEnd('Tempo total de execução');
 
-        return filename;
+        return { filename, imagePeople: allImagePeople };
 
     } catch (error) {
         console.error('Erro:', error.message);
@@ -189,6 +195,8 @@ async function processGroup(group, headers) {
     try {
         const nomeCongregacao = group?.name ?? 'N/A';
         const groupRows = [];
+        const imagePeople = [];
+        const urlAvatar = 'https://uploads.enuves.com/';
 
         // Verifica cache
         const cacheKey = `group_${group.id}`;
@@ -202,10 +210,11 @@ async function processGroup(group, headers) {
         const peoples = JSON.parse(membrosData.peoples || '[]');
 
         if (peoples.length === 0) {
-            const result = { 
-                rows: [], 
-                count: 0, 
-                groupName: nomeCongregacao 
+            const result = {
+                rows: [],
+                count: 0,
+                groupName: nomeCongregacao,
+                imagePeople: []
             };
             cache.groups.set(cacheKey, result);
             return result;
@@ -244,7 +253,12 @@ async function processGroup(group, headers) {
         allPeopleData.forEach(personData => {
             if (personData) {
                 const cpf = personData.doc_1?.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4').slice(0, 14);
-                
+
+                imagePeople.push({
+                    cpf: cpf,
+                    url: urlAvatar + `${personData.avatar_file}`
+                });         
+
                 groupRows.push([
                     nomeCongregacao.toUpperCase(),
                     formatarData(personData.created_at),
@@ -266,10 +280,11 @@ async function processGroup(group, headers) {
             }
         });
 
-        const result = { 
-            rows: groupRows, 
+        const result = {
+            rows: groupRows,
             count: groupRows.length,
-            groupName: nomeCongregacao
+            groupName: nomeCongregacao,
+            imagePeople
         };
         cache.groups.set(cacheKey, result);
         
@@ -339,6 +354,63 @@ function formatarData(data) {
     }
 }
 
+// Baixa as imagens das pessoas usando o CPF (imagePeople) como nome do arquivo
+async function downloadPeopleImages(imagePeopleList) {
+    if (!imagePeopleList || imagePeopleList.length === 0) {
+        console.log('Nenhuma imagem para baixar.');
+        return;
+    }
+
+    const downloadsPath = path.join(os.homedir(), 'Downloads', 'image_people');
+    await fs.promises.mkdir(downloadsPath, { recursive: true });
+
+    console.log(`Baixando ${imagePeopleList.length} imagens...`);
+
+    for (const person of imagePeopleList) {
+        const cpfLimpo = (person.cpf || '').replace(/\D/g, '');
+        const imageUrl = person.url;
+
+        if (!cpfLimpo) {
+            console.warn(`Pessoa sem CPF, pulando imagem: ${imageUrl}`);
+            continue;
+        }
+
+        const filePath = path.join(downloadsPath, `${cpfLimpo}.png`);
+
+        try {
+            const headCheck = await axios.head(imageUrl).catch(() => null);
+            if (!headCheck || headCheck.status !== 200) {
+                console.warn(`Imagem não encontrada: ${imageUrl}`);
+                continue;
+            }
+
+            try {
+                await fs.promises.access(filePath);
+                await fs.promises.unlink(filePath);
+            } catch {
+                // arquivo não existe, ignora
+            }
+
+            const response = await axios({
+                url: imageUrl,
+                responseType: 'stream',
+            });
+
+            const writer = fs.createWriteStream(filePath, { flags: 'w' });
+            response.data.pipe(writer);
+
+            await new Promise((resolve, reject) => {
+                writer.on('finish', resolve);
+                writer.on('error', reject);
+            });
+
+            console.log(`Imagem salva: ${filePath}`);
+        } catch (error) {
+            console.error(`Erro ao baixar imagem do CPF ${cpfLimpo}: ${error.message}`);
+        }
+    }
+}
+
 function determinarFuncao(extrafields) {
     const funcoes = ['MEMBRO', 'COOPERADOR', 'DIÁCONO', 'PRESBÍTERO', 'EVANGELISTA', 'PASTOR', 'CONGREGADO'];
     const campoFuncoes = extrafields.find(item => item.id_ef === "15822");
@@ -355,6 +427,7 @@ setTimeout(async () => {
         const resultado = await fetchData();
         if (resultado) {
             console.log('Processo concluído com sucesso!');
+            await downloadPeopleImages(resultado.imagePeople);
         } else {
             console.log('Processo falhou!');
         }
